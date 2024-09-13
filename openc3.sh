@@ -15,6 +15,26 @@ then
   fi
 fi
 
+# Set default values if variables are not set
+: "${OPENC3_API_PORT:=2900}"
+: "${OPENC3_API_SSL_PORT:=2943}"
+# Loop through all *.yaml.template files
+find . -type f -name "*.yaml.template" | while read -r template; do
+  # Define the corresponding .yaml file by removing .template
+  yaml_file="${template%.template}"
+  # Replace ${OPENC3_API_PORT:-2900} with the value of the environment variable
+  sed "s/\${OPENC3_API_PORT:-2900}/$OPENC3_API_PORT/g" "$template" > "$yaml_file"
+  # Replace ${OPENC3_API_SSL_PORT:-2943} with the value of the environment variable
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  # macOS (Darwin-based)
+  sed -i '' 's/\${OPENC3_API_SSL_PORT:-2943}/12042/g' "$yaml_file" 
+else
+  # Linux and other systems
+  sed -i 's/\${OPENC3_API_SSL_PORT:-2943}/12042/g' "$yaml_file"
+fi
+done
+
+
 export DOCKER_COMPOSE_COMMAND="docker compose"
 ${DOCKER_COMPOSE_COMMAND} version &> /dev/null
 if [ "$?" -ne 0 ]; then

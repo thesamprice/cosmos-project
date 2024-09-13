@@ -1,25 +1,25 @@
 ---
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: "/etc/traefik/cert.crt"
+        keyFile: "/etc/traefik/cert.key"
 entrypoints:
   web:
-    address: ":2900"
+    address: ":${OPENC3_API_PORT:-2900}"
     http:
       redirections:
         entryPoint:
-          to: websecure
+          to: ":${OPENC3_API_SSL_PORT:-2943}" # This should match port forwarding in your compose.yaml
           scheme: https
           permanent: false
   websecure:
-    address: ":2943"
+    address: ":${OPENC3_API_SSL_PORT:-2943}"
     http:
       tls:
         domains:
           - main: "mydomain.com" # Update with your domain
-certificatesResolvers:
-  myresolver:
-    acme:
-      email: me@mydomain.com
-      storage: "/tmp/acme.json"
-      tlsChallenge: {}
 http:
   middlewares:
     # Removes the first part of the url before passing onto the service
@@ -57,19 +57,13 @@ http:
       rule: PathPrefix(`/openc3-api`)
       service: service-api
       priority: 8
-      tls:
-        certResolver: myresolver
-        domains:
-          - main: "mydomain.com"
+      tls: {}
     # Route to the script api
     script-router:
       rule: PathPrefix(`/script-api`)
       service: service-script
       priority: 7
-      tls:
-        certResolver: myresolver
-        domains:
-          - main: "mydomain.com"
+      tls: {}
     # Route to other tool plugins hosted statically in Minio
     # Matches any path with a file extension which is assumed to be
     # a static file
@@ -77,10 +71,7 @@ http:
       rule: Path(`/tools/{id:.*/.*[.].*}`)
       service: service-minio
       priority: 6
-      tls:
-        certResolver: myresolver
-        domains:
-          - main: "mydomain.com"
+      tls: {}
     # Route to other tool plugins hosted statically in Minio
     # Where we need to add index.html to the path
     # Matches any tool name that starts with static and ends with slash
@@ -91,10 +82,7 @@ http:
         - "addIndexHtml"
       service: service-minio
       priority: 5
-      tls:
-        certResolver: myresolver
-        domains:
-          - main: "mydomain.com"
+      tls: {}
     # Route to other tool plugins hosted statically in Minio
     # Where we need to add .html to the path
     # Matches any tool name that starts with static
@@ -105,10 +93,7 @@ http:
         - "addDotHtml"
       service: service-minio
       priority: 4
-      tls:
-        certResolver: myresolver
-        domains:
-          - main: "mydomain.com"
+      tls: {}
     # Route to any path in minio
     files-router:
       rule: PathPrefix(`/files`)
@@ -117,10 +102,7 @@ http:
         - "removeFirst"
       service: service-minio
       priority: 3
-      tls:
-        certResolver: myresolver
-        domains:
-          - main: "mydomain.com"
+      tls: {}
     # Route to base files hosted statically in Minio
     # Matches any path with a file extension which is assumed to be
     # a static file
@@ -131,10 +113,7 @@ http:
         - "addToolsBase"
       service: service-minio
       priority: 2
-      tls:
-        certResolver: myresolver
-        domains:
-          - main: "mydomain.com"
+      tls: {}
     # This is the default route for everything that doesn't match a more specific route
     # It gets us to the base openc3 application
     web-router:
@@ -144,10 +123,7 @@ http:
         - "gotoToolsBaseIndex"
       service: service-minio
       priority: 1
-      tls:
-        certResolver: myresolver
-        domains:
-          - main: "mydomain.com"
+      tls: {}
   services:
     # The OpenC3 cmd/tlm api service
     service-api:
@@ -178,9 +154,9 @@ accessLog: {}
 # api:
 #   dashboard: true
 #   insecure: true
-#log:
-#  filePath: "/etc/traefik/traefik.log"
-#  level: "DEBUG"
+# log:
+#   filePath: '/etc/traefik/traefik.log'
+#   level: 'DEBUG'
 # accessLog:
 #   filePath: '/etc/traefik/access.log'
 #   fields:
