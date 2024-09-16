@@ -22,7 +22,7 @@
 
 networks:
   default:
-    name: openc3-cosmos-network
+    name: ${DOCKER_NETWORK_NAME:-openc3-cosmos-network-$USER}
 
 services:
   openc3-minio:

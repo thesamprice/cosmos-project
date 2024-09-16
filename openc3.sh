@@ -17,7 +17,11 @@ fi
 
 # Set default values if variables are not set
 : "${OPENC3_API_PORT:=2900}"
-: "${OPENC3_API_SSL_PORT:=2943}"
+: "${OPENC3_API_SSL_PORT:=$(($OPENC3_API_PORT+43))}"
+
+echo "Port to use is $OPENC3_API_PORT"
+echo "SSL PORT IS $OPENC3_API_SSL_PORT"
+
 # Loop through all *.yaml.template files
 find . -type f -name "*.yaml.template" | while read -r template; do
   # Define the corresponding .yaml file by removing .template
@@ -27,10 +31,10 @@ find . -type f -name "*.yaml.template" | while read -r template; do
   # Replace ${OPENC3_API_SSL_PORT:-2943} with the value of the environment variable
 if [[ "$OSTYPE" == "darwin"* ]]; then
   # macOS (Darwin-based)
-  sed -i '' 's/\${OPENC3_API_SSL_PORT:-2943}/12042/g' "$yaml_file" 
+  sed -i '' "s/\${OPENC3_API_SSL_PORT:-2943}/$OPENC3_API_SSL_PORT/g" "$yaml_file" 
 else
   # Linux and other systems
-  sed -i 's/\${OPENC3_API_SSL_PORT:-2943}/12042/g' "$yaml_file"
+  sed -i "s/\${OPENC3_API_SSL_PORT:-2943}/$OPENC3_API_SSL_PORT/g" "$yaml_file"
 fi
 done
 
@@ -69,7 +73,7 @@ usage() {
 if [ "$#" -eq 0 ]; then
   usage $0
 fi
-
+export DOCKER_NETWORK_NAME=openc3-cosmos-network-$USER
 case $1 in
   cli )
     # Source the .env file to setup environment variables
@@ -81,16 +85,16 @@ case $1 in
     # Run the command "ruby /openc3/bin/openc3cli" with all parameters starting at 2 since the first is 'openc3'
     args=`echo $@ | { read _ args; echo $args; }`
     # Make sure the network exists
-    (docker network create openc3-cosmos-network || true) &> /dev/null
-    docker run -it --rm --env-file "$(dirname -- "$0")/.env" --user=$OPENC3_USER_ID:$OPENC3_GROUP_ID --network openc3-cosmos-network -v `pwd`:/openc3/local:z -w /openc3/local $OPENC3_REGISTRY/$OPENC3_NAMESPACE/openc3-operator$OPENC3_IMAGE_SUFFIX:$OPENC3_TAG ruby /openc3/bin/openc3cli $args
+    (docker network create $DOCKER_NETWORK_NAME || true) &> /dev/null
+    docker run -it --rm --env-file "$(dirname -- "$0")/.env" --user=$OPENC3_USER_ID:$OPENC3_GROUP_ID --network $DOCKER_NETWORK_NAME -v `pwd`:/openc3/local:z -w /openc3/local $OPENC3_REGISTRY/$OPENC3_NAMESPACE/openc3-operator$OPENC3_IMAGE_SUFFIX:$OPENC3_TAG ruby /openc3/bin/openc3cli $args
     set +a
     ;;
   cliroot )
     set -a
     . "$(dirname -- "$0")/.env"
     args=`echo $@ | { read _ args; echo $args; }`
-    (docker network create openc3-cosmos-network || true) &> /dev/null
-    docker run -it --rm --env-file "$(dirname -- "$0")/.env" --user=root --network openc3-cosmos-network -v `pwd`:/openc3/local:z -w /openc3/local $OPENC3_REGISTRY/$OPENC3_NAMESPACE/openc3-operator$OPENC3_IMAGE_SUFFIX:$OPENC3_TAG ruby /openc3/bin/openc3cli $args
+    (docker network create $DOCKER_NETWORK_NAME || true) &> /dev/null
+    docker run -it --rm --env-file "$(dirname -- "$0")/.env" --user=root --network $DOCKER_NETWORK_NAME -v `pwd`:/openc3/local:z -w /openc3/local $OPENC3_REGISTRY/$OPENC3_NAMESPACE/openc3-operator$OPENC3_IMAGE_SUFFIX:$OPENC3_TAG ruby /openc3/bin/openc3cli $args
     set +a
     ;;
   start )
